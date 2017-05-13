@@ -13,12 +13,13 @@ namespace ApeSurfboardArena
     public class ArenaObject
     {
         Animation animation;
-      
+       public bool active;
         public Body body;
         public ArenaObject(Animation animation, Body body)
         {
             this.animation = animation;
             this.body = body;
+            active = true;
         }
         public void Update(GameTime gameTime )
         {
@@ -29,7 +30,10 @@ namespace ApeSurfboardArena
         public void Draw(SpriteBatch spriteBatch)
 
         {
-            animation.Draw(spriteBatch);
+            if (active)
+            {
+                animation.Draw(spriteBatch);
+            }
         }
 
     }

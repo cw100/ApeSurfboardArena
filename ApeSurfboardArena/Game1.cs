@@ -26,7 +26,7 @@ namespace ApeSurfboardArena
         static public int windowWidth;
         float width;
         int playersLeft =0;
-
+        Animation riverAnimation;
         float height;
         enum GameState
         { menu,
@@ -47,23 +47,38 @@ namespace ApeSurfboardArena
             width = ConvertUnits.ToSimUnits(windowWidth);
             height = ConvertUnits.ToSimUnits(windowHeight);
             random = new Random();
-            gameState = GameState.fighting;
+            gameState = GameState.menu;
         }
 
-       
+        List<ArenaObject> surfBarrels;
         protected override void Initialize()
         {
           
 
             base.Initialize();
-            LoadArena();
-            CreateFighterPlayers(1);
-        }
 
+            
+            LoadMenu();
+        }
+        public void LoadFigherGame(int amount, int health, int health2)
+        {
+            if (world == null)
+            {
+                world = new World(new Vector2(0, 20));
+
+            }
+            else
+            {
+                world.Clear();
+            }
+            LoadArena();
+            CreateFighterPlayers(amount, health,  health2);
+        }
         string menuText;
         SpriteFont menuFont;
         public void LoadMenu()
         {
+
             menuFont = Content.Load<SpriteFont>("GameOverFont");
             
 
@@ -75,14 +90,207 @@ namespace ApeSurfboardArena
 
             {
                 gameState = GameState.surfing;
+                LoadSurfPlayers(2);
             }
         }
-        public void DrawMenu(SpriteBatch spriteBatch)
+      public void DrawMenu(SpriteBatch spriteBatch)
         {
-            spriteBatch.DrawString(menuFont, menuText, new Vector2(windowWidth / 2, windowHeight *5/ 6), Color.Black, 0f, gameOverFont.MeasureString(menuText) / 2, 1f, SpriteEffects.None, 0f); ;
+            spriteBatch.DrawString(menuFont, menuText, new Vector2(windowWidth / 2, windowHeight *5/ 6), Color.Black, 0f, menuFont.MeasureString(menuText) / 2, 1f, SpriteEffects.None, 0f); ;
          
         }
+        List<SurfPlayer> surfPlayers;
+        Animation riverAnimationTwo;
+        Animation riverAnimationThree;
+        float timeSinceLastBarrel=0;
+        public void AddSurfBarrel(GameTime gameTime)
+        {
+            timeSinceLastBarrel += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (timeSinceLastBarrel >= 0.5)
+            {
+                Body body;
+                Animation animation;
 
+
+                Texture2D texture = Content.Load<Texture2D>("barrel");
+                animation = new Animation(texture);
+                animation.scale = 0.4f;
+                body = BodyFactory.CreateRectangle(world, ConvertUnits.ToSimUnits(270 * animation.scale),
+                      ConvertUnits.ToSimUnits(340 * animation.scale), 20f);
+
+
+                body.BodyType = BodyType.Dynamic;
+                body.IsSensor = true;
+                body.CollisionCategories = Category.All;
+                body.IgnoreGravity = true;
+                int y = random.Next(20, windowHeight);
+                body.Position = ConvertUnits.ToSimUnits(new Vector2(windowWidth + 100, y));
+                body.OnCollision += barrelOnCollision ;
+                ArenaObject arenaObject = new ArenaObject(animation, body);
+
+                surfBarrels.Add(arenaObject);
+                timeSinceLastBarrel = 0;
+            }
+           
+        }
+
+        private bool barrelOnCollision(Fixture fixtureA, Fixture fixtureB, FarseerPhysics.Dynamics.Contacts.Contact contact)
+        {
+            foreach (SurfPlayer player in surfPlayers)
+            {
+
+
+                if (fixtureB.Body ==  player.body)
+                {
+                    
+                    foreach( ArenaObject barrel in surfBarrels)
+                    {
+                        if(fixtureA.Body == barrel.body&& barrel.active)
+                        {
+                            player.hitPoints -= 10;
+                            barrel.active = false;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        public void UpdateSurfBarrels(GameTime gameTime)
+        {
+            foreach(ArenaObject barrel in surfBarrels )
+            {
+                barrel.body.Position += ConvertUnits.ToSimUnits( new Vector2(-500, 0)* (float)gameTime.ElapsedGameTime.TotalSeconds);
+                barrel.Update(gameTime);
+            }
+        }
+        public void LoadSurfPlayers(int amount)
+        {
+            surfTime = 0;
+              surfBarrels = new List<ArenaObject>();
+            if (world == null)
+            {
+                world = new World(new Vector2(0, 20));
+
+            }
+            else
+            {
+                world.Clear();
+            }
+
+            Texture2D healthBar = Content.Load<Texture2D>("healthbar");
+            Texture2D redBar = Content.Load<Texture2D>("redbar");
+            Texture2D riverTex = Content.Load<Texture2D>("river");
+            riverAnimation = new Animation(riverTex);
+            riverTex = Content.Load<Texture2D>("river");
+            riverAnimationTwo = new Animation(riverTex);
+
+            riverTex = Content.Load<Texture2D>("river");
+            riverAnimationThree = new Animation(riverTex);
+            riverAnimation.Position = new Vector2(800, 540);
+            riverAnimationTwo.Position = new Vector2(800*2, 540);
+
+            riverAnimationThree.Position = new Vector2(800 * 3, 540);
+            Body screenBottom = BodyFactory.CreateEdge(world, ConvertUnits.ToSimUnits(0, windowHeight),
+         ConvertUnits.ToSimUnits(windowWidth, windowHeight));
+            screenBottom.BodyType = BodyType.Static;
+            screenBottom.CollisionCategories = Category.All;
+            Body screenTop = BodyFactory.CreateEdge(world, ConvertUnits.ToSimUnits(0, 0),
+                 ConvertUnits.ToSimUnits(windowWidth, 0));
+            screenTop.BodyType = BodyType.Static;
+
+            screenTop.CollisionCategories = Category.All;
+            surfPlayers = new List<SurfPlayer>();
+            for(int i = 0; i<amount; i++)
+            {
+                Texture2D texture = Content.Load<Texture2D>("surfboard");
+           Animation   animation = new Animation(texture);
+                animation.scale = 0.5f;
+                Body body = BodyFactory.CreateRectangle(world, ConvertUnits.ToSimUnits(480 * animation.scale),
+                       ConvertUnits.ToSimUnits(120* animation.scale), 10.0f);
+                body.BodyType = BodyType.Dynamic;
+                body.Position = ConvertUnits.ToSimUnits(400, 100*(i+2));
+                body.CollisionCategories = Category.Cat2;
+                body.CollidesWith = Category.Cat1;
+                body.IgnoreGravity=true;
+              
+
+                SurfPlayer player = new SurfPlayer(animation, body, healthBar, redBar, (PlayerIndex)i);
+                surfPlayers.Add(player);
+            }
+        }
+        float surfTime;
+        public bool IsSurfOver(GameTime gameTime)
+        {
+            surfTime += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (surfTime >45)
+            {
+                return true;
+            }
+            foreach (SurfPlayer player in surfPlayers)
+            {
+                if (player.hitPoints <= 50)
+
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        public void UpdateSurfPlayers(GameTime gameTime)
+        {
+            AddSurfBarrel(gameTime);
+            UpdateSurfBarrels(gameTime);
+            foreach(Player player in surfPlayers)
+            {
+                player.Update(gameTime);
+            }
+            if(IsSurfOver(gameTime))
+            {
+                LoadFigherGame(2, surfPlayers[0].hitPoints, surfPlayers[1].hitPoints);
+                gameState = GameState.fighting;
+            }
+            riverAnimation.Position += new Vector2(-500, 0)* (float)gameTime.ElapsedGameTime.TotalSeconds;
+            riverAnimationTwo.Position += new Vector2(-500, 0) * (float)gameTime.ElapsedGameTime.TotalSeconds;
+            riverAnimationThree.Position += new Vector2(-500, 0) * (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (riverAnimation.Position.X <= 0)
+            {
+
+                riverAnimation.Position = new Vector2(800 * 3, 540);
+            }
+            if (riverAnimationTwo.Position.X <= 0)
+            {
+
+                riverAnimationTwo.Position = new Vector2(800 * 3, 540);
+            }
+            if (riverAnimationThree.Position.X <= 0)
+            {
+
+                riverAnimationThree.Position = new Vector2(800 * 3, 540);
+            }
+            riverAnimation.Update(gameTime);
+            riverAnimationTwo.Update(gameTime);
+            riverAnimationThree.Update(gameTime);
+        }
+        public void DrawSurfBarrel(SpriteBatch spriteBatch)
+        {
+            foreach(ArenaObject barrel in surfBarrels)
+            {
+                barrel.Draw(spriteBatch);
+            }
+        }
+        public void DrawSurfPlayers(SpriteBatch spriteBatch)
+        {
+            riverAnimation.Draw(spriteBatch);
+            riverAnimationTwo.Draw(spriteBatch);
+
+            riverAnimationThree.Draw(spriteBatch);
+            DrawSurfBarrel(spriteBatch);
+            foreach (Player player in surfPlayers)
+            {
+                player.Draw(spriteBatch);
+            }
+        }
         public void LoadObjects(int amount)
         {
             arenaObjects = new List<ArenaObject>();
@@ -181,13 +389,15 @@ namespace ApeSurfboardArena
             pillars.Add(arenaObject);
 
         }
-        public void CreateFighterPlayers(int amount)
+        public void CreateFighterPlayers(int amount,int health, int health2)
         {
             playersLeft = 0;
 
                fighterPlayers = new List<FighterPlayer>();
             for(int i = 0; i<amount; i++)
             {
+                Texture2D healthBar = Content.Load<Texture2D>("healthbar");
+                Texture2D redBar = Content.Load<Texture2D>("redbar");
                 Dictionary<string, Animation> attackAnimations = new Dictionary<string, Animation>();
                 Texture2D texture = Content.Load<Texture2D>("punchSwish");
                 Animation animation = new Animation(texture);
@@ -224,7 +434,7 @@ namespace ApeSurfboardArena
                 Body body = BodyFactory.CreateRectangle(world, ConvertUnits.ToSimUnits(120),
                        ConvertUnits.ToSimUnits(250), 10.0f);
                 body.BodyType = BodyType.Dynamic;
-                body.Position = ConvertUnits.ToSimUnits(100, 100);
+                body.Position = ConvertUnits.ToSimUnits(100*(i*18), 100);
                 body.CollisionCategories = Category.Cat4;
                 body.CollidesWith = Category.Cat1 ;
                 body.Friction = 0.6f;
@@ -235,7 +445,13 @@ namespace ApeSurfboardArena
                 feetSensor.CollisionCategories = Category.Cat3;
                 feetSensor.CollidesWith = Category.Cat2;
 
-                FighterPlayer player = new FighterPlayer(fighterAnimations, attackAnimations, body, feetSensor,(PlayerIndex)i);
+                FighterPlayer player = new FighterPlayer(fighterAnimations, attackAnimations, healthBar, redBar, body, feetSensor,(PlayerIndex)i);
+                if(i == 0)
+                { player.hitPoints = health; }
+                if(i==1)
+                {
+                    player.hitPoints = health2;
+                }
                 fighterPlayers.Add(player);
                
 
@@ -275,7 +491,7 @@ namespace ApeSurfboardArena
         public void UpdateGameOver()
         {
 
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Start == ButtonState.Pressed )
+            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed )
 
             {
                 gameState = GameState.menu;
@@ -297,7 +513,6 @@ namespace ApeSurfboardArena
         {
             // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
-
             if (world == null)
             {
                 world = new World(new Vector2(0, 20));
@@ -307,6 +522,7 @@ namespace ApeSurfboardArena
             {
                 world.Clear();
             }
+
         }
 
         /// <summary>
@@ -317,7 +533,33 @@ namespace ApeSurfboardArena
         {
             // TODO: Unload any non ContentManager content here
         }
-
+        public void UpdateFightingGame(GameTime gameTime)
+        {
+            foreach (Player player in fighterPlayers)
+            {
+                player.Update(gameTime);
+            }
+            foreach (ArenaObject arenaObject in arenaObjects)
+            {
+                arenaObject.Update(gameTime);
+            }
+            foreach (ArenaObject pillar in pillars)
+            {
+                pillar.Update(gameTime);
+            }
+            if (IsGameOver())
+            {
+                foreach (FighterPlayer player in fighterPlayers)
+                {
+                    if (player.active)
+                    {
+                        winIndex = (int)player.playerIndex;
+                    }
+                }
+                gameState = GameState.gameover;
+                LoadGameOver();
+            }
+        }
         /// <summary>
         /// Allows the game to run logic such as updating the world,
         /// checking for collisions, gathering input, and playing audio.
@@ -334,32 +576,15 @@ namespace ApeSurfboardArena
             {
                 UpdateMenu();
             }
-            if (gameState == GameState.fighting|| gameState == GameState.gameover )
+            if(gameState ==  GameState.surfing)
+
             {
-                foreach (Player player in fighterPlayers)
-                {
-                    player.Update(gameTime);
-                }
-                foreach (ArenaObject arenaObject in arenaObjects)
-                {
-                    arenaObject.Update(gameTime);
-                }
-                foreach (ArenaObject pillar in pillars)
-                {
-                    pillar.Update(gameTime);
-                }
-                if(IsGameOver())
-                {
-                    foreach(FighterPlayer player in fighterPlayers)
-                        {
-                        if(player.active)
-                        {
-                            winIndex = (int)player.playerIndex;
-                        }
-                    }
-                    gameState = GameState.gameover;
-                    LoadGameOver();
-                }
+                UpdateSurfPlayers(gameTime);
+
+            }
+                if (gameState == GameState.fighting|| gameState == GameState.gameover )
+            {
+                UpdateFightingGame(gameTime);
             }
             if(gameState == GameState.gameover)
             {
@@ -399,7 +624,13 @@ namespace ApeSurfboardArena
                     player.DrawAttack(spriteBatch);
                 }
             }
-            if(gameState == GameState.gameover)
+            if (gameState == GameState.surfing)
+
+            {
+                DrawSurfPlayers(spriteBatch);
+
+            }
+            if (gameState == GameState.gameover)
             {
                 DrawGameOver(spriteBatch);
             }

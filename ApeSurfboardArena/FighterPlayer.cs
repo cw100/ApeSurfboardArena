@@ -26,6 +26,7 @@ namespace ApeSurfboardArena
         SpriteEffects flip;
         public bool active;
         public Body body;
+        public Texture2D redBar;
         public PlayerIndex playerIndex;
         enum MoveState
         {
@@ -51,8 +52,10 @@ namespace ApeSurfboardArena
         JumpState jumpState;
         MoveState moveState;
         float timeSinceLastJump;
-        public FighterPlayer(Dictionary<string, Animation> animations, Dictionary<string, Animation> attackAnimations, Body body,Body feetSensor, PlayerIndex playerIndex)
+        Texture2D healthtexture;
+        public FighterPlayer(Dictionary<string, Animation> animations, Dictionary<string, Animation> attackAnimations, Texture2D healthtexture,Texture2D redBar, Body body,Body feetSensor, PlayerIndex playerIndex)
         {
+            this.redBar = redBar;
             active = true;
             timeSinceLastJump = 0;
             hitPoints = 100;
@@ -68,7 +71,7 @@ namespace ApeSurfboardArena
             attackState = AttackState.none;
             feetSensor.OnCollision += new OnCollisionEventHandler(GroundCollison);
 
-           
+            this.healthtexture = healthtexture;
 
         }
 
@@ -84,7 +87,7 @@ namespace ApeSurfboardArena
         }
         public void Punch()
         {
-            if (GamePad.GetState(playerIndex).Buttons.X == ButtonState.Pressed && jumpState == JumpState.onGround&& attackState== AttackState.none)
+            if (GamePad.GetState(playerIndex).Buttons.X == ButtonState.Pressed && attackState== AttackState.none)
             {
                 attackState = AttackState.punching;
                 body.LinearVelocity = new Vector2(0, body.LinearVelocity.Y);
@@ -303,7 +306,7 @@ namespace ApeSurfboardArena
                 attackAnimation.Update(gameTime);
             }
                 currentAnimation.flip = flip;
-            currentAnimation.Position = ConvertUnits.ToDisplayUnits(body.Position) + new Vector2(0, -10);
+            currentAnimation.Position = ConvertUnits.ToDisplayUnits(body.Position) + new Vector2(0, -5);
             body.Rotation = 0;
             feetSensor.Position = body.Position ;
             feetSensor.Rotation = body.Rotation;
@@ -359,6 +362,22 @@ namespace ApeSurfboardArena
 
         public override void Draw(SpriteBatch spriteBatch)
         {
+            Rectangle healthRectangle = new Rectangle((int)currentAnimation.X- redBar.Width/2,
+                                          (int)currentAnimation.Y  - (int)(currentAnimation.frameHeight * currentAnimation.scale) / 2 + 10,
+                                          (int)(redBar.Width),
+                                          redBar.Height);
+
+            spriteBatch.Draw(redBar, healthRectangle, Color.Red);
+            float healthPercentage =(float) hitPoints / 100;
+            float visibleWidth = (float)healthtexture.Width * healthPercentage;
+
+            healthRectangle = new Rectangle((int)currentAnimation.X - redBar.Width / 2,
+                                           (int)currentAnimation.Y -(int)( currentAnimation.frameHeight * currentAnimation.scale) / 2 +10,
+                                           (int)(visibleWidth),
+                                           healthtexture.Height);
+
+            spriteBatch.Draw(healthtexture, healthRectangle, Color.Green);
+
 
             currentAnimation.Draw(spriteBatch);
         }
