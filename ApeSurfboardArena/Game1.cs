@@ -5,6 +5,7 @@ using FarseerPhysics.Factories;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Microsoft.Xna.Framework.Media;
 using System;
 using System.Collections.Generic;
 
@@ -15,6 +16,7 @@ namespace ApeSurfboardArena
     /// </summary>
     public class Game1 : Game
     {
+        
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
         static public List<FighterPlayer> fighterPlayers;
@@ -35,7 +37,8 @@ namespace ApeSurfboardArena
             gameover
         }
         GameState gameState;
-
+        Song apeMusic;
+        Song surfMusic;
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -48,6 +51,7 @@ namespace ApeSurfboardArena
             height = ConvertUnits.ToSimUnits(windowHeight);
             random = new Random();
             gameState = GameState.menu;
+            
         }
 
         List<ArenaObject> surfBarrels;
@@ -57,10 +61,12 @@ namespace ApeSurfboardArena
 
             base.Initialize();
 
-            
+          
+          
             LoadMenu();
         }
-        public void LoadFigherGame(int amount, int health, int health2)
+        Animation arenaAnimation;
+        public void LoadFighterGame(int amount, int health, int health2)
         {
             if (world == null)
             {
@@ -71,6 +77,9 @@ namespace ApeSurfboardArena
             {
                 world.Clear();
             }
+            Texture2D arenaTex = Content.Load<Texture2D>("arena");
+            arenaAnimation = new Animation(arenaTex);
+            arenaAnimation.Position = new Vector2(windowWidth / 2, windowHeight / 2);
             LoadArena();
             CreateFighterPlayers(amount, health,  health2);
         }
@@ -78,23 +87,32 @@ namespace ApeSurfboardArena
         SpriteFont menuFont;
         public void LoadMenu()
         {
+            apeMusic = Content.Load<Song>("apeMusic");
 
+            surfMusic = Content.Load<Song>("surfMusic");
+            Texture2D arenaTex = Content.Load<Texture2D>("arena");
+            arenaAnimation = new Animation(arenaTex);
+            arenaAnimation.Position = new Vector2(windowWidth / 2, windowHeight / 2);
             menuFont = Content.Load<SpriteFont>("GameOverFont");
             
 
             menuText = "Press start to play!";
         }
-        public void UpdateMenu()
+        public void UpdateMenu(GameTime gameTime)
         {
+            arenaAnimation.Update(gameTime);
             if (GamePad.GetState(PlayerIndex.One).Buttons.Start == ButtonState.Pressed)
 
             {
+                MediaPlayer.Play(surfMusic);
                 gameState = GameState.surfing;
                 LoadSurfPlayers(2);
             }
         }
       public void DrawMenu(SpriteBatch spriteBatch)
         {
+            spriteBatch.DrawString(menuFont, "Gorilla Gauntlet!", new Vector2(windowWidth / 2, windowHeight * 2 / 6), Color.Black, 0f, menuFont.MeasureString("Gorilla Gauntlet!") / 2, 3.5f, SpriteEffects.None, 0f); ;
+
             spriteBatch.DrawString(menuFont, menuText, new Vector2(windowWidth / 2, windowHeight *5/ 6), Color.Black, 0f, menuFont.MeasureString(menuText) / 2, 1f, SpriteEffects.None, 0f); ;
          
         }
@@ -209,7 +227,7 @@ namespace ApeSurfboardArena
                 Body body = BodyFactory.CreateRectangle(world, ConvertUnits.ToSimUnits(480 * animation.scale),
                        ConvertUnits.ToSimUnits(120* animation.scale), 10.0f);
                 body.BodyType = BodyType.Dynamic;
-                body.Position = ConvertUnits.ToSimUnits(400, 100*(i+2));
+                body.Position = ConvertUnits.ToSimUnits(400, 100*((i*5+2)));
                 body.CollisionCategories = Category.Cat2;
                 body.CollidesWith = Category.Cat1;
                 body.IgnoreGravity=true;
@@ -223,7 +241,7 @@ namespace ApeSurfboardArena
         public bool IsSurfOver(GameTime gameTime)
         {
             surfTime += (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (surfTime >45)
+            if (surfTime >30)
             {
                 return true;
             }
@@ -247,7 +265,10 @@ namespace ApeSurfboardArena
             }
             if(IsSurfOver(gameTime))
             {
-                LoadFigherGame(2, surfPlayers[0].hitPoints, surfPlayers[1].hitPoints);
+                MediaPlayer.Stop();
+                MediaPlayer.Play(apeMusic);
+                MediaPlayer.IsRepeating = true;
+                LoadFighterGame(2, surfPlayers[0].hitPoints, surfPlayers[1].hitPoints);
                 gameState = GameState.fighting;
             }
             riverAnimation.Position += new Vector2(-500, 0)* (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -520,6 +541,7 @@ namespace ApeSurfboardArena
             }
             else
             {
+
                 world.Clear();
             }
 
@@ -535,6 +557,7 @@ namespace ApeSurfboardArena
         }
         public void UpdateFightingGame(GameTime gameTime)
         {
+            arenaAnimation.Update(gameTime);
             foreach (Player player in fighterPlayers)
             {
                 player.Update(gameTime);
@@ -556,6 +579,7 @@ namespace ApeSurfboardArena
                         winIndex = (int)player.playerIndex;
                     }
                 }
+                MediaPlayer.Stop();
                 gameState = GameState.gameover;
                 LoadGameOver();
             }
@@ -567,14 +591,14 @@ namespace ApeSurfboardArena
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
-                Exit();
+        
+
 
 
             world.Step(Math.Min((float)gameTime.ElapsedGameTime.TotalSeconds, (1f / 30f)));
             if(gameState ==GameState.menu)
             {
-                UpdateMenu();
+                UpdateMenu(gameTime);
             }
             if(gameState ==  GameState.surfing)
 
@@ -600,11 +624,12 @@ namespace ApeSurfboardArena
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
+            GraphicsDevice.Clear(Color.Beige);
             
             spriteBatch.Begin();
             if (gameState == GameState.fighting || gameState == GameState.gameover)
             {
+                arenaAnimation.Draw(spriteBatch);
 
                 foreach (ArenaObject pillar in pillars)
                 {
@@ -636,6 +661,7 @@ namespace ApeSurfboardArena
             }
             if (gameState == GameState.menu)
             {
+               arenaAnimation.Draw(spriteBatch);
                 DrawMenu(spriteBatch);
             }
             spriteBatch.End();
