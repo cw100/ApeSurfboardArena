@@ -16,7 +16,7 @@ namespace ApeSurfboardArena
     {
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
-        List<FighterPlayer> fighterPlayers;
+        static public List<FighterPlayer> fighterPlayers;
         public static World world;
         
         static public int windowHeight;
@@ -74,10 +74,35 @@ namespace ApeSurfboardArena
             fighterPlayers = new List<FighterPlayer>();
             for(int i = 0; i<amount; i++)
             {
-                Dictionary<string, Animation> fighterAnimations = new Dictionary<string, Animation>();
-                Texture2D texture = Content.Load<Texture2D>("Ape");
+                Dictionary<string, Animation> attackAnimations = new Dictionary<string, Animation>();
+                Texture2D texture = Content.Load<Texture2D>("punchSwish");
                 Animation animation = new Animation(texture);
+           
+                attackAnimations.Add("punch", animation);
+
+
+                Dictionary<string, Animation> fighterAnimations = new Dictionary<string, Animation>();
+                 texture = Content.Load<Texture2D>("jump");
+                 animation = new Animation(texture, 5, 0.75f, new Vector2(0, 0));
+                animation.runOnce = true;
+                fighterAnimations.Add("jump", animation);
+                 texture = Content.Load<Texture2D>("walk");
+                 animation = new Animation(texture, 8, 1f, new Vector2(0, 0));
+                fighterAnimations.Add("walk", animation);
+                texture = Content.Load<Texture2D>("idle");
+                 animation = new Animation(texture, 5,0.75f, new Vector2(0,0));
                 fighterAnimations.Add("idle", animation);
+
+
+                texture = Content.Load<Texture2D>("run");
+                 animation = new Animation(texture, 8, 1f, new Vector2(0, 0));
+                fighterAnimations.Add("run", animation);
+
+                texture = Content.Load<Texture2D>("punch");
+                animation = new Animation(texture, 5, 0.5f, new Vector2(0, 0));
+                animation.runOnce = true;
+                fighterAnimations.Add("punch", animation);
+
                 Body body = BodyFactory.CreateRectangle(world, ConvertUnits.ToSimUnits(150),
                        ConvertUnits.ToSimUnits(250), 10.0f);
                 body.BodyType = BodyType.Dynamic;
@@ -92,7 +117,7 @@ namespace ApeSurfboardArena
                 feetSensor.CollisionCategories = Category.Cat3;
                 feetSensor.CollidesWith = Category.Cat2;
 
-                FighterPlayer player = new FighterPlayer(fighterAnimations, body, feetSensor,(PlayerIndex)i);
+                FighterPlayer player = new FighterPlayer(fighterAnimations, attackAnimations, body, feetSensor,(PlayerIndex)i);
                 fighterPlayers.Add(player);
 
 
@@ -169,6 +194,11 @@ namespace ApeSurfboardArena
           foreach(Player player in fighterPlayers)
             {
                 player.Draw(spriteBatch);
+            }
+
+            foreach (FighterPlayer player in fighterPlayers)
+            {
+                player.DrawAttack(spriteBatch);
             }
 
             spriteBatch.End();

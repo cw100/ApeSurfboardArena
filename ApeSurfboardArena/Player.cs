@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace ApeSurfboardArena
 {
-    class Player
+    public class Player
     {
         public virtual void Update(GameTime gameTime)
         { 
