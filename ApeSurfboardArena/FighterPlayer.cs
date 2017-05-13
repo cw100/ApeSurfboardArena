@@ -24,8 +24,7 @@ namespace ApeSurfboardArena
         Animation attackAnimation;
         Animation currentAnimation;
         SpriteEffects flip;
-        Vector2 position;
-        Vector2 velocity;
+      
         public Body body;
         PlayerIndex playerIndex;
         enum MoveState
@@ -46,6 +45,7 @@ namespace ApeSurfboardArena
             onGround,
             jumping
         }
+        ButtonState lastState;
         AttackState attackState;
         JumpState jumpState;
         MoveState moveState;
@@ -57,7 +57,7 @@ namespace ApeSurfboardArena
             jumpState = JumpState.onGround;
             this.feetSensor = feetSensor;
             this.playerIndex = playerIndex;
-
+            lastState = ButtonState.Released;
             this.currentAnimation = animations["idle"];
             this.body = body;
             moveState = MoveState.idle;
@@ -72,6 +72,7 @@ namespace ApeSurfboardArena
             jumpState = JumpState.onGround;
             animations["jump"].frameIndex = 0;
             animations["jump"].isPaused = false;
+            body.Friction = 0.6f;
             return true;
         }
         public void Punch()
@@ -149,6 +150,17 @@ namespace ApeSurfboardArena
                      }
                 }
                
+            }
+            if(fixtureB.CollisionCategories == Category.All)
+            {
+                if (flip == SpriteEffects.None)
+                {                    
+                    fixtureB.Body.ApplyLinearImpulse(new Vector2(400, -400));
+                }
+                    else
+                    {
+                    fixtureB.Body.ApplyLinearImpulse(new Vector2(-400, -400));
+                }
             }
             return true;
         }
@@ -239,17 +251,16 @@ namespace ApeSurfboardArena
         public void Jump(GameTime gameTime)
         {
       
-        if(GamePad.GetState(playerIndex).Buttons.A == ButtonState.Pressed&& jumpState != JumpState.jumping)
+        if(GamePad.GetState(playerIndex).Buttons.A == ButtonState.Pressed&& lastState  == ButtonState.Released&& jumpState != JumpState.jumping)
             {
-                Vector2 force= new Vector2(0, -20000);
-                body.ApplyForce(force);
+                body.ApplyLinearImpulse(new Vector2(0, -400));
                 jumpState = JumpState.jumping;
-              
-
+                body.Friction = 0;
             }
-        
-        
-    }
+
+            lastState = GamePad.GetState(playerIndex).Buttons.A;
+
+        }
        
         public override void Update(GameTime gameTime)
         {
@@ -267,7 +278,7 @@ namespace ApeSurfboardArena
                 currentAnimation.flip = flip;
             currentAnimation.Position = ConvertUnits.ToDisplayUnits(body.Position) + new Vector2(0, -10);
             body.Rotation = 0;
-            feetSensor.Position = body.Position;
+            feetSensor.Position = body.Position ;
             feetSensor.Rotation = body.Rotation;
             feetSensor.Awake = true;
             currentAnimation.scale = 0.825f;
@@ -278,6 +289,7 @@ namespace ApeSurfboardArena
 
         public override void Draw(SpriteBatch spriteBatch)
         {
+
             currentAnimation.Draw(spriteBatch);
         }
         public  void DrawAttack(SpriteBatch spriteBatch)

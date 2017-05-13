@@ -1,4 +1,5 @@
 ﻿using FarseerPhysics;
+using FarseerPhysics.Common;
 using FarseerPhysics.Dynamics;
 using FarseerPhysics.Factories;
 using Microsoft.Xna.Framework;
@@ -18,7 +19,9 @@ namespace ApeSurfboardArena
         SpriteBatch spriteBatch;
         static public List<FighterPlayer> fighterPlayers;
         public static World world;
-        
+
+        static public List<ArenaObject> arenaObjects;
+        Random random;
         static public int windowHeight;
         static public int windowWidth;
         float width;
@@ -34,7 +37,7 @@ namespace ApeSurfboardArena
             graphics.PreferredBackBufferHeight = windowHeight;
             width = ConvertUnits.ToSimUnits(windowWidth);
             height = ConvertUnits.ToSimUnits(windowHeight);
-       
+            random = new Random();
         }
 
        
@@ -45,6 +48,42 @@ namespace ApeSurfboardArena
             base.Initialize();
             LoadArena();
             CreateFighterPlayers(2);
+        }
+        public void LoadObjects(int amount)
+        {
+            arenaObjects = new List<ArenaObject>();
+
+            for (int i = 0; i < amount; i++)
+            {
+                Body body;
+                Animation animation;
+                int type = random.Next(0, 2);
+                if (type ==0)
+                {
+
+                    Texture2D texture = Content.Load<Texture2D>("barrel");
+                     animation = new Animation(texture);
+                    animation.scale = 0.4f;
+                     body = BodyFactory.CreateRectangle(world, ConvertUnits.ToSimUnits(270 * animation.scale),
+                           ConvertUnits.ToSimUnits(340 * animation.scale), 10.0f);
+                }
+                else
+            {
+                Texture2D texture = Content.Load<Texture2D>("crate");
+                     animation = new Animation(texture);
+                    animation.scale = 0.3f;
+
+                    body = BodyFactory.CreateRectangle(world, ConvertUnits.ToSimUnits(animation.frameWidth * animation.scale),
+                           ConvertUnits.ToSimUnits(animation.frameHeight * animation.scale), 10.0f);
+                }
+                body.BodyType = BodyType.Dynamic;
+                body.Friction = 0.6f;
+                body.CollisionCategories = Category.All;
+                int x = random.Next(10, windowWidth);
+                body.Position = ConvertUnits.ToSimUnits( new Vector2(x,20));
+                ArenaObject  arenaObject= new ArenaObject(animation, body);
+                arenaObjects.Add(arenaObject);
+            }
         }
         public void LoadArena()
         {
@@ -65,7 +104,7 @@ namespace ApeSurfboardArena
                    ConvertUnits.ToSimUnits(windowWidth, 0));
             screenTop.BodyType = BodyType.Static;
             screenTop.Friction = 0f;
-
+            LoadObjects(10);
         }
 
         public void CreateFighterPlayers(int amount)
@@ -111,7 +150,7 @@ namespace ApeSurfboardArena
                 body.CollidesWith = Category.Cat1 ;
                 body.Friction = 0.6f;
                 Body feetSensor = BodyFactory.CreateRectangle(world, ConvertUnits.ToSimUnits(150),
-                      ConvertUnits.ToSimUnits(251), 10.0f);
+                      ConvertUnits.ToSimUnits(250), 10.0f);
                 feetSensor.BodyType = BodyType.Dynamic;
                 feetSensor.IsSensor = true;
                 feetSensor.CollisionCategories = Category.Cat3;
@@ -125,11 +164,7 @@ namespace ApeSurfboardArena
 
             }
         }
-        public void LoadFighterAnimations()
-        {
-           
-
-        }
+     
 
 
         /// <summary>
@@ -177,6 +212,10 @@ namespace ApeSurfboardArena
             {
                 player.Update(gameTime);
             }
+            foreach(ArenaObject arenaObject in arenaObjects)
+            {
+                arenaObject.Update(gameTime);
+                }
             base.Update(gameTime);
         }
 
@@ -190,12 +229,16 @@ namespace ApeSurfboardArena
             
             spriteBatch.Begin();
 
-            
-          foreach(Player player in fighterPlayers)
+        
+            foreach (ArenaObject arenaObject in arenaObjects)
+            {
+                arenaObject.Draw(spriteBatch);
+            }
+
+            foreach (Player player in fighterPlayers)
             {
                 player.Draw(spriteBatch);
             }
-
             foreach (FighterPlayer player in fighterPlayers)
             {
                 player.DrawAttack(spriteBatch);
