@@ -24,9 +24,9 @@ namespace ApeSurfboardArena
         Animation attackAnimation;
         Animation currentAnimation;
         SpriteEffects flip;
-      
+        public bool active;
         public Body body;
-        PlayerIndex playerIndex;
+        public PlayerIndex playerIndex;
         enum MoveState
         {
             idle,
@@ -43,14 +43,18 @@ namespace ApeSurfboardArena
         enum JumpState
         {
             onGround,
-            jumping
+            jumping,
+            falling
         }
         ButtonState lastState;
         AttackState attackState;
         JumpState jumpState;
         MoveState moveState;
+        float timeSinceLastJump;
         public FighterPlayer(Dictionary<string, Animation> animations, Dictionary<string, Animation> attackAnimations, Body body,Body feetSensor, PlayerIndex playerIndex)
         {
+            active = true;
+            timeSinceLastJump = 0;
             hitPoints = 100;
             this.animations = animations;
             this.attackAnimations = attackAnimations;
@@ -63,16 +67,19 @@ namespace ApeSurfboardArena
             moveState = MoveState.idle;
             attackState = AttackState.none;
             feetSensor.OnCollision += new OnCollisionEventHandler(GroundCollison);
+
            
 
         }
-        
+
+      
+
         private bool GroundCollison(Fixture fixtureA, Fixture fixtureB, Contact contact)
         {
             jumpState = JumpState.onGround;
             animations["jump"].frameIndex = 0;
             animations["jump"].isPaused = false;
-            body.Friction = 0.6f;
+            
             return true;
         }
         public void Punch()
@@ -131,7 +138,7 @@ namespace ApeSurfboardArena
             }
             
         }
-
+        public Color color = Color.White;
         private bool PunchDamage(Fixture fixtureA, Fixture fixtureB, Contact contact)
         {
 
@@ -140,13 +147,15 @@ namespace ApeSurfboardArena
                 if (player.body.Equals(fixtureB.Body))
                 {
                     player.hitPoints -= 10;
+                    player.timeSinceDamage = 0;
+                    player.color = Color.Red;
                     if (flip == SpriteEffects.None)
                     {
-                        player.body.ApplyLinearImpulse(new Vector2(400,- 400));
+                        player.body.ApplyLinearImpulse(new Vector2(200,- 200));
                     }
                     else
                     {
-                        player.body.ApplyLinearImpulse(new Vector2(-400, -400));
+                        player.body.ApplyLinearImpulse(new Vector2(-200, -200));
                      }
                 }
                
@@ -155,70 +164,77 @@ namespace ApeSurfboardArena
             {
                 if (flip == SpriteEffects.None)
                 {                    
-                    fixtureB.Body.ApplyLinearImpulse(new Vector2(400, -400));
+                    fixtureB.Body.ApplyLinearImpulse(new Vector2(200, -300));
                 }
                     else
                     {
-                    fixtureB.Body.ApplyLinearImpulse(new Vector2(-400, -400));
+                    fixtureB.Body.ApplyLinearImpulse(new Vector2(-200, -300));
                 }
             }
             return true;
         }
         public void StateSwitcher()
         {
-            if (body.LinearVelocity.X > 4 || body.LinearVelocity.X < -4)
+            if (active)
             {
-                moveState = MoveState.running;
-            }
-            if (body.LinearVelocity.X < 4 && body.LinearVelocity.X > -4)
-            {
-                if (body.LinearVelocity.X < 0.01 && body.LinearVelocity.X > -0.01)
+                if (body.LinearVelocity.X > 4 || body.LinearVelocity.X < -4)
                 {
-
-                    moveState = MoveState.idle;
+                    moveState = MoveState.running;
                 }
-                else
+                if (body.LinearVelocity.X < 4 && body.LinearVelocity.X > -4)
                 {
-                    moveState = MoveState.walking;
-                }
-            }
-            if (jumpState != JumpState.jumping && attackState == AttackState.none)
-            {
-                switch (moveState)
-                {
-                    case MoveState.idle:
-                        currentAnimation = animations["idle"];
-                        break;
-                    case MoveState.running:
-                        currentAnimation = animations["run"];
-                        break;
-                    case MoveState.walking:
-                        currentAnimation = animations["walk"];
-                        break;
-
-
-                    default:
-                        break;
-                }
-            }
-            else
-            {
-                if (jumpState == JumpState.jumping && attackState == AttackState.none)
-                {
-                    currentAnimation = animations["jump"];
-                }
-                else
-                {
-                    switch (attackState)
+                    if (body.LinearVelocity.X < 0.02 && body.LinearVelocity.X > -0.02)
                     {
-                        case AttackState.punching:
-                            currentAnimation = animations["punch"];
+
+                        moveState = MoveState.idle;
+                    }
+                    else
+                    {
+                        moveState = MoveState.walking;
+                    }
+                }
+                if (jumpState != JumpState.jumping && attackState == AttackState.none)
+                {
+                    switch (moveState)
+                    {
+                        case MoveState.idle:
+                            currentAnimation = animations["idle"];
                             break;
+                        case MoveState.running:
+                            currentAnimation = animations["run"];
+                            break;
+                        case MoveState.walking:
+                            currentAnimation = animations["walk"];
+                            break;
+
 
                         default:
                             break;
                     }
                 }
+                else
+                {
+                    if (jumpState == JumpState.jumping && attackState == AttackState.none)
+                    {
+                        currentAnimation = animations["jump"];
+                    }
+                    else
+                    {
+                        switch (attackState)
+                        {
+                            case AttackState.punching:
+                                currentAnimation = animations["punch"];
+                                break;
+
+                            default:
+                                break;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                currentAnimation = animations["death"];
             }
         }
         public void Move(GameTime gameTime)
@@ -250,24 +266,35 @@ namespace ApeSurfboardArena
         }
         public void Jump(GameTime gameTime)
         {
-      
-        if(GamePad.GetState(playerIndex).Buttons.A == ButtonState.Pressed&& lastState  == ButtonState.Released&& jumpState != JumpState.jumping)
-            {
-                body.ApplyLinearImpulse(new Vector2(0, -400));
-                jumpState = JumpState.jumping;
-                body.Friction = 0;
-            }
 
-            lastState = GamePad.GetState(playerIndex).Buttons.A;
+            timeSinceLastJump += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (GamePad.GetState(playerIndex).Buttons.A == ButtonState.Pressed&& lastState  == ButtonState.Released&& jumpState == JumpState.onGround&& timeSinceLastJump>0.75f)
+            {
+                body.ApplyLinearImpulse(new Vector2(0, -300));
+                jumpState = JumpState.jumping;
+           
+                timeSinceLastJump = 0;
+            }
+            
+                lastState = GamePad.GetState(playerIndex).Buttons.A;
 
         }
-       
+        public float timeSinceDamage;
+        
         public override void Update(GameTime gameTime)
         {
-          
-           Move(gameTime);
-            Jump(gameTime);
-            Punch();
+            timeSinceDamage +=(float) gameTime.ElapsedGameTime.TotalSeconds;
+            
+            if (hitPoints <=0)
+            {
+                active = false;
+            }
+            if (active)
+            {
+                Move(gameTime);
+                Jump(gameTime);
+                Punch();
+            }
             StateSwitcher();
             if (attackAnimation != null)
             {
@@ -281,8 +308,51 @@ namespace ApeSurfboardArena
             feetSensor.Position = body.Position ;
             feetSensor.Rotation = body.Rotation;
             feetSensor.Awake = true;
+      
+            var currentNode = feetSensor.ContactList;
+         
+            while ((currentNode != null) && (currentNode.Contact.IsTouching != true))
+            {
+                
+
+                currentNode = currentNode.Next;
+            }
+            if ((currentNode == null))
+            {
+
+                body.Friction = 0f;
+                if ((body.ContactList != null))
+                {
+                   
+                        body.ContactList.Contact.Friction = 0f;
+                    
+                }
+                if (jumpState != JumpState.jumping)
+                {
+                    jumpState = JumpState.falling;
+                }
+            }
+            else
+            {
+
+                body.ContactList.Contact.Friction = 0.6f;
+                    body.Friction = 0.8f;
+
+
+
+            }
             currentAnimation.scale = 0.825f;
             currentAnimation.angle = body.Rotation;
+
+            if (timeSinceDamage > 0.25f)
+            {
+                color = Color.White;
+            }
+            if(!active)
+            {
+                color = Color.White;
+            }
+            currentAnimation.color = color;
             currentAnimation.Update(gameTime);
            
         }
