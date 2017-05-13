@@ -28,7 +28,14 @@ namespace ApeSurfboardArena
             this.animation = animation;
             this.body = body;
             hitPoints = 100;
-            color = Color.White;
+            if (playerIndex == PlayerIndex.One)
+            {
+                color = Color.White;
+            }
+            else
+            {
+                color = Color.Yellow;
+            }
         }
         public void Move()
         {

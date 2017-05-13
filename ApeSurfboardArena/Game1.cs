@@ -179,7 +179,8 @@ namespace ApeSurfboardArena
             foreach(ArenaObject barrel in surfBarrels )
             {
                 barrel.body.Position += ConvertUnits.ToSimUnits( new Vector2(-500, 0)* (float)gameTime.ElapsedGameTime.TotalSeconds);
-                barrel.Update(gameTime);
+                barrel.body.Rotation += 0.05f;
+               barrel.Update(gameTime);
             }
         }
         public void LoadSurfPlayers(int amount)

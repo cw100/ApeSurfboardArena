@@ -24,6 +24,7 @@ namespace ApeSurfboardArena
         Animation attackAnimation;
         Animation currentAnimation;
         SpriteEffects flip;
+        Color firstColor;
         public bool active;
         public Body body;
         public Texture2D redBar;
@@ -72,6 +73,15 @@ namespace ApeSurfboardArena
             feetSensor.OnCollision += new OnCollisionEventHandler(GroundCollison);
 
             this.healthtexture = healthtexture;
+            if (playerIndex == PlayerIndex.One)
+            {
+                firstColor = Color.White;
+            }
+            else
+            {
+                firstColor = Color.Yellow;
+            }
+            color = firstColor;
 
         }
 
@@ -87,7 +97,7 @@ namespace ApeSurfboardArena
         }
         public void Punch()
         {
-            if (GamePad.GetState(playerIndex).Buttons.X == ButtonState.Pressed && attackState== AttackState.none)
+            if (GamePad.GetState(playerIndex).Buttons.X == ButtonState.Pressed && attackState== AttackState.none&&active)
             {
                 attackState = AttackState.punching;
                 body.LinearVelocity = new Vector2(0, body.LinearVelocity.Y);
@@ -296,8 +306,9 @@ namespace ApeSurfboardArena
             {
                 Move(gameTime);
                 Jump(gameTime);
-                Punch();
+               
             }
+            Punch();
             StateSwitcher();
             if (attackAnimation != null)
             {
@@ -349,11 +360,11 @@ namespace ApeSurfboardArena
 
             if (timeSinceDamage > 0.25f)
             {
-                color = Color.White;
+                color = firstColor;
             }
             if(!active)
             {
-                color = Color.White;
+                color = firstColor;
             }
             currentAnimation.color = color;
             currentAnimation.Update(gameTime);
